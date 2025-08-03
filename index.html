@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interlocking Puzzle Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Use the Babylon.js CDN -->
+    <!-- Babylon.js CDN'sini kullanın -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/5.0.0/babylon.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -30,25 +30,25 @@
         <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 text-white">Interlocking Puzzle Viewer</h1>
 
         <div class="flex items-center justify-center space-x-4 mb-8">
-            <span id="solution-counter" class="text-xl font-medium">Solution 0 of 0</span>
+            <span id="solution-counter" class="text-xl font-medium">Çözüm 0 / 0</span>
             <button id="next-button"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                Next Solution
+                Sonraki Çözüm
             </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
-                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Single Piece</h2>
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Tek Parça</h2>
                 <div id="single-piece-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
-                    <!-- The canvas elements for Babylon.js will be created here -->
+                    <!-- Babylon.js için canvas öğeleri burada oluşturulacak -->
                     <canvas id="single-piece-canvas" class="babylon-canvas"></canvas>
                 </div>
             </div>
             <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
-                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Final Cube</h2>
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Son Küp</h2>
                 <div id="cube-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
-                    <!-- The canvas elements for Babylon.js will be created here -->
+                    <!-- Babylon.js için canvas öğeleri burada oluşturulacak -->
                     <canvas id="cube-canvas" class="babylon-canvas"></canvas>
                 </div>
             </div>
@@ -56,30 +56,31 @@
     </div>
     
     <script>
-        // Global variables for the Babylon.js scenes
+        // Babylon.js sahneleri için global değişkenler
         let engine1, scene1, camera1;
         let engine2, scene2, camera2;
         let singlePieceGroup, puzzleGroup;
+        let shadowGenerator1, shadowGenerator2; 
 
-        // Puzzle data and state
+        // Bulmaca verileri ve durumu
         let solutionsData = [];
         let currentSolutionIndex = 0;
         
-        // Constants for 3D visualization
+        // 3D görselleştirme için sabitler
         const CUBE_SIZE = 1;
-        const GAP = 0.15; // Gap between cubes for visual separation
+        const GAP = 0.15; 
         const CELL_OFFSET = CUBE_SIZE / 2;
         
-        // A vibrant color palette using hex strings
+        // Hex dizeleri kullanarak canlı bir renk paleti
         const palette = ['#FF0000', '#FFFF00', '#0000FF', '#008000'];
         
-        // --- UI Elements ---
+        // --- UI Öğeleri ---
         const nextButton = document.getElementById('next-button');
         const solutionCounter = document.getElementById('solution-counter');
         const singlePieceCanvas = document.getElementById('single-piece-canvas');
         const cubeCanvas = document.getElementById('cube-canvas');
 
-        // --- Event Listeners ---
+        // --- Olay Dinleyicileri ---
         nextButton.addEventListener('click', () => {
             if (solutionsData.length > 0) {
                 currentSolutionIndex = (currentSolutionIndex + 1) % solutionsData.length;
@@ -87,13 +88,12 @@
             }
         });
 
-        // --- Babylon.js Initialization ---
+        // --- Babylon.js Başlatma ---
         function createScene(canvas, N) {
             const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color3.FromHexString('#1f2937');
 
-            // Set up a robust camera that handles user input automatically
             const camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, N * 2, new BABYLON.Vector3(N / 2, N / 2, N / 2), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 10;
@@ -101,21 +101,17 @@
             camera.maxZ = 1000;
             camera.lowerRadiusLimit = N;
             
-            // Add lighting for a realistic PBR material
             const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
             light.intensity = 0.7;
             
-            // Add a directional light for shadows
             const directionalLight = new BABYLON.DirectionalLight("directionalLight", new BABYLON.Vector3(-1, -1, -1), scene);
             directionalLight.position = new BABYLON.Vector3(N * 2, N * 2, N * 2);
             directionalLight.intensity = 1.0;
             directionalLight.shadowEnabled = true;
             
-            // Shadows generator
             const shadowGenerator = new BABYLON.ShadowGenerator(1024, directionalLight);
             shadowGenerator.useBlurExponentialShadowMap = true;
             
-            // Add a ground plane to receive shadows
             const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 100, height: 100}, scene);
             const groundMaterial = new BABYLON.PBRMaterial("groundMaterial", scene);
             groundMaterial.metallic = 0.0;
@@ -124,7 +120,6 @@
             ground.material = groundMaterial;
             ground.receiveShadows = true;
 
-            // Handle window resize events
             window.addEventListener('resize', () => {
                 engine.resize();
             });
@@ -133,20 +128,17 @@
         }
 
         function init() {
-            // Create both scenes
             const result1 = createScene(singlePieceCanvas, 3);
             engine1 = result1.engine; scene1 = result1.scene; camera1 = result1.camera;
-            const shadowGenerator1 = result1.shadowGenerator;
+            shadowGenerator1 = result1.shadowGenerator;
 
             const result2 = createScene(cubeCanvas, 3);
             engine2 = result2.engine; scene2 = result2.scene; camera2 = result2.camera;
-            const shadowGenerator2 = result2.shadowGenerator;
+            shadowGenerator2 = result2.shadowGenerator;
 
-            // Create a parent node to hold all puzzle pieces
             singlePieceGroup = new BABYLON.TransformNode("singlePieceGroup", scene1);
             puzzleGroup = new BABYLON.TransformNode("puzzleGroup", scene2);
 
-            // Start rendering loops
             engine1.runRenderLoop(() => {
                 scene1.render();
             });
@@ -154,62 +146,59 @@
                 scene2.render();
             });
 
-            loadSolutions(shadowGenerator1, shadowGenerator2);
+            loadSolutions();
         }
 
-        // --- Visualization Logic ---
-        function generateCube(x, y, z, color, scene, shadowGenerator) {
-            // Create a box with bevels for a more polished look
+        // --- Görselleştirme Mantığı ---
+        function generateCube(x, y, z, color, scene) {
             const cube = BABYLON.MeshBuilder.CreateBox("cube", { size: CUBE_SIZE - GAP }, scene);
             
-            // Apply PBR (Physically Based Rendering) material for realistic lighting
             const pbr = new BABYLON.PBRMaterial("pbr", scene);
             pbr.metallic = 0.5;
             pbr.roughness = 0.5;
             pbr.albedoColor = BABYLON.Color3.FromHexString(color);
-            pbr.alpha = 0.8; // Set transparency to 80%
-            pbr.hasAlpha = true; // Enable alpha blending
+            pbr.alpha = 0.8; 
+            pbr.hasAlpha = true; 
             cube.material = pbr;
 
             cube.position.set(x + CELL_OFFSET, y + CELL_OFFSET, z + CELL_OFFSET);
             
-            // Enable shadows
-            shadowGenerator.addShadowCaster(cube);
+            const shadowGenerator = scene1 === scene ? shadowGenerator1 : shadowGenerator2;
+            if (shadowGenerator) {
+                shadowGenerator.addShadowCaster(cube);
+            }
 
             return cube;
         }
 
-        function drawPiece(piece, group, color, scene, shadowGenerator) {
-            // Dispose of old meshes before creating new ones
+        function drawPiece(piece, group, color, scene) {
             group.getChildren().forEach(child => child.dispose());
             piece.forEach(([x, y, z]) => {
-                const cube = generateCube(x, y, z, color, scene, shadowGenerator);
-                cube.parent = group; // Parent the cube to the group node
+                const cube = generateCube(x, y, z, color, scene);
+                cube.parent = group; 
             });
         }
 
-        function drawSolution(finalCubePieces, group, scene, shadowGenerator) {
+        function drawSolution(finalCubePieces, group, scene) {
             group.getChildren().forEach(child => child.dispose());
             finalCubePieces.forEach((piece, i) => {
                 const color = palette[i % palette.length];
                 piece.forEach(([x, y, z]) => {
-                    const cube = generateCube(x, y, z, color, scene, shadowGenerator);
+                    const cube = generateCube(x, y, z, color, scene);
                     cube.parent = group;
                 });
             });
         }
 
-        function displayDefaultCube(shadowGenerator1, shadowGenerator2) {
-            console.log("cikti.txt not found or empty. Displaying a default 3x3x3 cube.");
+        function displayDefaultCube() {
+            console.log("cikti.txt bulunamadı veya boş. Varsayılan bir 3x3x3 küp gösteriliyor.");
             const defaultN = 3;
             const defaultPiece = [[0, 0, 0]];
             const defaultFinalCube = [];
             
-            // Generate all coordinates for a 3x3x3 cube
             for (let x = 0; x < defaultN; x++) {
                 for (let y = 0; y < defaultN; y++) {
                     for (let z = 0; z < defaultN; z++) {
-                        // Each cell is a "piece" for visualization purposes
                         defaultFinalCube.push([[x, y, z]]); 
                     }
                 }
@@ -222,30 +211,30 @@
             }];
 
             currentSolutionIndex = 0;
-            solutionCounter.textContent = "No solutions found. Displaying a default 3x3x3 cube.";
+            solutionCounter.textContent = "Çözüm bulunamadı. Varsayılan bir 3x3x3 küp gösteriliyor.";
             nextButton.disabled = true;
 
-            displaySolution(shadowGenerator1, shadowGenerator2);
+            displaySolution();
         }
         
-        async function loadSolutions(shadowGenerator1, shadowGenerator2) {
+        async function loadSolutions() {
             try {
-                // Fetch the solution data from the text file
                 const response = await fetch('cikti.txt');
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP hatası! durum: ${response.status}`);
                 }
                 const text = await response.text();
                 solutionsData = parseSolutions(text);
 
                 if (solutionsData.length > 0) {
-                    displaySolution(shadowGenerator1, shadowGenerator2);
+                    nextButton.disabled = false;
+                    displaySolution();
                 } else {
-                    displayDefaultCube(shadowGenerator1, shadowGenerator2);
+                    displayDefaultCube();
                 }
             } catch (error) {
-                console.error("Error loading cikti.txt:", error);
-                displayDefaultCube(shadowGenerator1, shadowGenerator2);
+                console.error("cikti.txt yüklenirken hata oluştu:", error);
+                displayDefaultCube();
             }
         }
 
@@ -256,38 +245,34 @@
             lines.forEach(line => {
                 try {
                     const data = JSON.parse(line);
-                    // Correctly push the full `placements` array, which contains all pieces
                     parsed.push({
                         n: data.n,
                         piece: data.piece,
-                        finalCube: data.placements // This is the array of all pieces
+                        finalCube: data.placements
                     });
                 } catch (e) {
-                    console.error("Error parsing JSON line:", e);
+                    console.error("JSON satırı ayrıştırılırken hata oluştu:", e);
                 }
             });
             return parsed;
         }
 
-        function displaySolution(shadowGenerator1, shadowGenerator2) {
+        function displaySolution() {
             if (solutionsData.length === 0) return;
 
             const solution = solutionsData[currentSolutionIndex];
             const N = solution.n;
             
-            solutionCounter.textContent = `Solution ${currentSolutionIndex + 1} of ${solutionsData.length}`;
+            solutionCounter.textContent = `Çözüm ${currentSolutionIndex + 1} / ${solutionsData.length}`;
 
-            // Update camera position based on the new N
             camera1.target.set(N / 2, N / 2, N / 2);
             camera1.radius = N * 2;
             camera2.target.set(N / 2, N / 2, N / 2);
             camera2.radius = N * 2;
 
-            // Draw the single piece
-            drawPiece(solution.piece, singlePieceGroup, palette[0], scene1, shadowGenerator1);
+            drawPiece(solution.piece, singlePieceGroup, palette[0], scene1);
             
-            // Draw all pieces for the final cube in different colors
-            drawSolution(solution.finalCube, puzzleGroup, scene2, shadowGenerator2);
+            drawSolution(solution.finalCube, puzzleGroup, scene2);
         }
 
         window.onload = function() {
