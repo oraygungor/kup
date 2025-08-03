@@ -63,7 +63,8 @@
         const CUBE_SIZE = 1;
         const GAP = 0.15; // Increased gap for better visualization
         const CELL_OFFSET = CUBE_SIZE / 2;
-        const palette = ['#e57373', '#81d4fa', '#66bb6a', '#ffee58', '#ba68c8', '#ffca28', '#f87171', '#38bdf8'];
+        // Updated color palette for a better visual
+        const palette = ['#ff6f61', '#5d9cec', '#5cb85c', '#ffc107', '#9370db', '#87ceeb', '#f08080', '#00ced1'];
         
         // --- UI Elements ---
         const nextButton = document.getElementById('next-button');
@@ -90,9 +91,10 @@
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
             
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            // Stronger lighting for better shadows and depth
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
             directionalLight.position.set(N * 2, N * 2, N * 2);
             scene.add(directionalLight);
 
@@ -200,7 +202,7 @@
         // --- Visualization Logic ---
         function generateCube(x, y, z, color) {
             const geometry = new THREE.BoxGeometry(CUBE_SIZE - GAP, CUBE_SIZE - GAP, CUBE_SIZE - GAP);
-            const material = new THREE.MeshPhongMaterial({ color: color });
+            const material = new THREE.MeshPhongMaterial({ color: color, flatShading: true });
             const cube = new THREE.Mesh(geometry, material);
             cube.position.set(x + CELL_OFFSET, y + CELL_OFFSET, z + CELL_OFFSET);
             return cube;
