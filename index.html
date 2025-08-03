@@ -206,8 +206,7 @@
 
         // --- Visualization Logic ---
         function generateCube(x, y, z, color) {
-            const geometry = new THREE.BoxGeometry(CUBE_SIZE - GAP, CUBE_SIZE - GAP, CUBE_SIZE - GAP);
-            // Use a different material for a more volumetric feel
+            const geometry = new THREE.TorusKnotGeometry(0.3, 0.1, 64, 8);
             const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.2 });
             const cube = new THREE.Mesh(geometry, material);
             cube.position.set(x + CELL_OFFSET, y + CELL_OFFSET, z + CELL_OFFSET);
