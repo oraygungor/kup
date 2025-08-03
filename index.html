@@ -167,6 +167,8 @@
             pbr.metallic = 0.5;
             pbr.roughness = 0.5;
             pbr.albedoColor = BABYLON.Color3.FromHexString(color);
+            pbr.alpha = 0.8; // Set transparency to 80%
+            pbr.hasAlpha = true; // Enable alpha blending
             cube.material = pbr;
 
             cube.position.set(x + CELL_OFFSET, y + CELL_OFFSET, z + CELL_OFFSET);
