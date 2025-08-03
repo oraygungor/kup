@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interlocking Puzzle Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babylon.js CDN'sini kullanın -->
+    <!-- Use the Babylon.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/5.0.0/babylon.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -30,25 +30,25 @@
         <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 text-white">Interlocking Puzzle Viewer</h1>
 
         <div class="flex items-center justify-center space-x-4 mb-8">
-            <span id="solution-counter" class="text-xl font-medium">Çözüm 0 / 0</span>
+            <span id="solution-counter" class="text-xl font-medium">Solution 0 of 0</span>
             <button id="next-button"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                Sonraki Çözüm
+                Next Solution
             </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
-                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Tek Parça</h2>
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Single Piece</h2>
                 <div id="single-piece-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
-                    <!-- Babylon.js için canvas öğeleri burada oluşturulacak -->
+                    <!-- The canvas elements for Babylon.js will be created here -->
                     <canvas id="single-piece-canvas" class="babylon-canvas"></canvas>
                 </div>
             </div>
             <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
-                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Son Küp</h2>
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Final Cube</h2>
                 <div id="cube-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
-                    <!-- Babylon.js için canvas öğeleri burada oluşturulacak -->
+                    <!-- The canvas elements for Babylon.js will be created here -->
                     <canvas id="cube-canvas" class="babylon-canvas"></canvas>
                 </div>
             </div>
@@ -56,31 +56,31 @@
     </div>
     
     <script>
-        // Babylon.js sahneleri için global değişkenler
+        // Global variables for the Babylon.js scenes
         let engine1, scene1, camera1;
         let engine2, scene2, camera2;
         let singlePieceGroup, puzzleGroup;
         let shadowGenerator1, shadowGenerator2; 
 
-        // Bulmaca verileri ve durumu
+        // Puzzle data and state
         let solutionsData = [];
         let currentSolutionIndex = 0;
         
-        // 3D görselleştirme için sabitler
+        // Constants for 3D visualization
         const CUBE_SIZE = 1;
         const GAP = 0.15; 
         const CELL_OFFSET = CUBE_SIZE / 2;
         
-        // Hex dizeleri kullanarak canlı bir renk paleti
+        // A vibrant color palette using hex strings
         const palette = ['#FF0000', '#FFFF00', '#0000FF', '#008000'];
         
-        // --- UI Öğeleri ---
+        // --- UI Elements ---
         const nextButton = document.getElementById('next-button');
         const solutionCounter = document.getElementById('solution-counter');
         const singlePieceCanvas = document.getElementById('single-piece-canvas');
         const cubeCanvas = document.getElementById('cube-canvas');
 
-        // --- Olay Dinleyicileri ---
+        // --- Event Listeners ---
         nextButton.addEventListener('click', () => {
             if (solutionsData.length > 0) {
                 currentSolutionIndex = (currentSolutionIndex + 1) % solutionsData.length;
@@ -88,7 +88,7 @@
             }
         });
 
-        // --- Babylon.js Başlatma ---
+        // --- Babylon.js Initialization ---
         function createScene(canvas, N) {
             const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
             const scene = new BABYLON.Scene(engine);
@@ -149,7 +149,7 @@
             loadSolutions();
         }
 
-        // --- Görselleştirme Mantığı ---
+        // --- Visualization Logic ---
         function generateCube(x, y, z, color, scene) {
             const cube = BABYLON.MeshBuilder.CreateBox("cube", { size: CUBE_SIZE - GAP }, scene);
             
@@ -191,7 +191,7 @@
         }
 
         function displayDefaultCube() {
-            console.log("cikti.txt bulunamadı veya boş. Varsayılan bir 3x3x3 küp gösteriliyor.");
+            console.log("cikti.txt not found or empty. Displaying a default 3x3x3 cube.");
             const defaultN = 3;
             const defaultPiece = [[0, 0, 0]];
             const defaultFinalCube = [];
@@ -211,7 +211,7 @@
             }];
 
             currentSolutionIndex = 0;
-            solutionCounter.textContent = "Çözüm bulunamadı. Varsayılan bir 3x3x3 küp gösteriliyor.";
+            solutionCounter.textContent = "No solutions found. Displaying a default 3x3x3 cube.";
             nextButton.disabled = true;
 
             displaySolution();
@@ -221,7 +221,7 @@
             try {
                 const response = await fetch('cikti.txt');
                 if (!response.ok) {
-                    throw new Error(`HTTP hatası! durum: ${response.status}`);
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const text = await response.text();
                 solutionsData = parseSolutions(text);
@@ -233,7 +233,7 @@
                     displayDefaultCube();
                 }
             } catch (error) {
-                console.error("cikti.txt yüklenirken hata oluştu:", error);
+                console.error("Error loading cikti.txt:", error);
                 displayDefaultCube();
             }
         }
@@ -251,7 +251,7 @@
                         finalCube: data.placements
                     });
                 } catch (e) {
-                    console.error("JSON satırı ayrıştırılırken hata oluştu:", e);
+                    console.error("Error parsing JSON line:", e);
                 }
             });
             return parsed;
@@ -263,7 +263,7 @@
             const solution = solutionsData[currentSolutionIndex];
             const N = solution.n;
             
-            solutionCounter.textContent = `Çözüm ${currentSolutionIndex + 1} / ${solutionsData.length}`;
+            solutionCounter.textContent = `Solution ${currentSolutionIndex + 1} of ${solutionsData.length}`;
 
             camera1.target.set(N / 2, N / 2, N / 2);
             camera1.radius = N * 2;
