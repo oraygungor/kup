@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interlocking Puzzle Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Use the Babylon.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/5.0.0/babylon.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .canvas-container {
@@ -23,216 +24,211 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 p-8">
+<body class="bg-gray-900 text-gray-200 p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6">Interlocking Puzzle Viewer</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 text-white">Interlocking Puzzle Viewer</h1>
 
         <div class="flex items-center justify-center space-x-4 mb-8">
-            <span id="solution-counter" class="text-xl">Solution 0 of 0</span>
+            <span id="solution-counter" class="text-xl font-medium">Solution 0 of 0</span>
             <button id="next-button"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
-                Next
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                Next Solution
             </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-semibold text-center mb-4">Single Piece</h2>
-                <div id="single-piece-container" class="canvas-container rounded-xl overflow-hidden"></div>
+            <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Single Piece</h2>
+                <div id="single-piece-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
+                    <!-- The canvas elements for Babylon.js will be created here -->
+                    <canvas id="single-piece-canvas" class="babylon-canvas"></canvas>
+                </div>
             </div>
-            <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-semibold text-center mb-4">Final Cube</h2>
-                <div id="cube-container" class="canvas-container rounded-xl overflow-hidden"></div>
+            <div class="bg-gray-800 p-6 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-semibold text-center mb-4 text-white">Final Cube</h2>
+                <div id="cube-container" class="canvas-container rounded-2xl overflow-hidden shadow-inner bg-gray-900">
+                    <!-- The canvas elements for Babylon.js will be created here -->
+                    <canvas id="cube-canvas" class="babylon-canvas"></canvas>
+                </div>
             </div>
         </div>
     </div>
     
     <script>
-        // Global variables for the three.js scenes
-        let scene1, camera1, renderer1;
-        let scene2, camera2, renderer2;
+        // Global variables for the Babylon.js scenes
+        let engine1, scene1, camera1;
+        let engine2, scene2, camera2;
         let singlePieceGroup, puzzleGroup;
-        let animationFrameId;
 
         // Puzzle data and state
         let solutionsData = [];
         let currentSolutionIndex = 0;
         
-        // Constants
+        // Constants for 3D visualization
         const CUBE_SIZE = 1;
-        const GAP = 0.15; // Increased gap for better visualization
+        const GAP = 0.15; // Gap between cubes for visual separation
         const CELL_OFFSET = CUBE_SIZE / 2;
-        // Updated color palette for a better visual
-        const palette = ['#ff6f61', '#5d9cec', '#5cb85c', '#ffc107', '#9370db', '#87ceeb', '#f08080', '#00ced1'];
+        
+        // A vibrant color palette using hex strings
+        const palette = ['#6a0572', '#ab89a9', '#f2d4ee', '#f2b5d4', '#e29783', '#c68469', '#a67252', '#865f3c'];
         
         // --- UI Elements ---
         const nextButton = document.getElementById('next-button');
         const solutionCounter = document.getElementById('solution-counter');
-        const singlePieceContainer = document.getElementById('single-piece-container');
-        const cubeContainer = document.getElementById('cube-container');
+        const singlePieceCanvas = document.getElementById('single-piece-canvas');
+        const cubeCanvas = document.getElementById('cube-canvas');
 
         // --- Event Listeners ---
         nextButton.addEventListener('click', () => {
-            currentSolutionIndex = (currentSolutionIndex + 1) % solutionsData.length;
-            displaySolution();
+            if (solutionsData.length > 0) {
+                currentSolutionIndex = (currentSolutionIndex + 1) % solutionsData.length;
+                displaySolution();
+            }
         });
 
-        // --- Three.js Initialization ---
-        function initScene(container, N) {
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1f2937);
+        // --- Babylon.js Initialization ---
+        function createScene(canvas, N) {
+            const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color3.FromHexString('#1f2937');
 
-            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(N * 1.5, N * 1.5, N * 1.5);
-            camera.lookAt(new THREE.Vector3(N / 2, N / 2, N / 2));
-
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            container.appendChild(renderer.domElement);
+            // Set up a robust camera that handles user input automatically
+            const camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, N * 2, new BABYLON.Vector3(N / 2, N / 2, N / 2), scene);
+            camera.attachControl(canvas, true);
+            camera.wheelPrecision = 10;
+            camera.minZ = 0.1;
+            camera.maxZ = 1000;
+            camera.lowerRadiusLimit = N;
             
-            // New lighting for more volumetric look
-            const ambientLight = new THREE.AmbientLight(0x404040); // Soft white ambient light
-            scene.add(ambientLight);
-
-            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x000000, 0.6);
-            scene.add(hemisphereLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(N * 2, N * 2, N * 2);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-
-            // Add camera controls
-            let isDragging = false;
-            let previousMousePosition = { x: 0, y: 0 };
-            const rotationSpeed = 0.01;
-
-            container.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            });
-
-            container.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                const deltaX = e.clientX - previousMousePosition.x;
-                const deltaY = e.clientY - previousMousePosition.y;
-
-                const center = new THREE.Vector3(N / 2, N / 2, N / 2);
-                const quaternion = new THREE.Quaternion();
-                
-                const yawAxis = new THREE.Vector3(0, 1, 0);
-                quaternion.setFromAxisAngle(yawAxis, -deltaX * rotationSpeed);
-                
-                const pitchAxis = new THREE.Vector3(1, 0, 0);
-                pitchAxis.applyQuaternion(camera.quaternion);
-                quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(pitchAxis, -deltaY * rotationSpeed));
-
-                camera.position.sub(center);
-                camera.position.applyQuaternion(quaternion);
-                camera.position.add(center);
-                camera.up.applyQuaternion(quaternion);
-                camera.lookAt(center);
-
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            });
-
-            container.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
+            // Add lighting for a realistic PBR material
+            const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
+            light.intensity = 0.7;
             
-            // Touch controls
-            let previousTouchPosition = { x: 0, y: 0 };
-            container.addEventListener('touchstart', (e) => {
-                isDragging = true;
-                const touch = e.touches[0];
-                previousTouchPosition = { x: touch.clientX, y: touch.clientY };
-            });
+            // Add a directional light for shadows
+            const directionalLight = new BABYLON.DirectionalLight("directionalLight", new BABYLON.Vector3(-1, -1, -1), scene);
+            directionalLight.position = new BABYLON.Vector3(N * 2, N * 2, N * 2);
+            directionalLight.intensity = 1.0;
+            directionalLight.shadowEnabled = true;
+            
+            // Shadows generator
+            const shadowGenerator = new BABYLON.ShadowGenerator(1024, directionalLight);
+            shadowGenerator.useBlurExponentialShadowMap = true;
+            
+            // Add a ground plane to receive shadows
+            const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 100, height: 100}, scene);
+            const groundMaterial = new BABYLON.PBRMaterial("groundMaterial", scene);
+            groundMaterial.metallic = 0.0;
+            groundMaterial.roughness = 0.8;
+            groundMaterial.albedoColor = new BABYLON.Color3.FromHexString('#111827');
+            ground.material = groundMaterial;
+            ground.receiveShadows = true;
 
-            container.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - previousTouchPosition.x;
-                const deltaY = touch.clientY - previousTouchPosition.y;
-
-                const center = new THREE.Vector3(N / 2, N / 2, N / 2);
-                const quaternion = new THREE.Quaternion();
-                
-                const yawAxis = new THREE.Vector3(0, 1, 0);
-                quaternion.setFromAxisAngle(yawAxis, -deltaX * rotationSpeed);
-                
-                const pitchAxis = new THREE.Vector3(1, 0, 0);
-                pitchAxis.applyQuaternion(camera.quaternion);
-                quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(pitchAxis, -deltaY * rotationSpeed));
-
-                camera.position.sub(center);
-                camera.position.applyQuaternion(quaternion);
-                camera.position.add(center);
-                camera.up.applyQuaternion(quaternion);
-                camera.lookAt(center);
-
-                previousTouchPosition = { x: touch.clientX, y: touch.clientY };
-            });
-
-            container.addEventListener('touchend', () => {
-                isDragging = false;
-            });
-
+            // Handle window resize events
             window.addEventListener('resize', () => {
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
+                engine.resize();
             });
 
-            return { scene, camera, renderer };
+            return { engine, scene, camera, shadowGenerator };
         }
 
         function init() {
-            // Scenes are initialized with a default N value
-            const result1 = initScene(singlePieceContainer, 4); 
-            scene1 = result1.scene; camera1 = result1.camera; renderer1 = result1.renderer;
+            // Create both scenes
+            const result1 = createScene(singlePieceCanvas, 3);
+            engine1 = result1.engine; scene1 = result1.scene; camera1 = result1.camera;
+            const shadowGenerator1 = result1.shadowGenerator;
 
-            const result2 = initScene(cubeContainer, 4);
-            scene2 = result2.scene; camera2 = result2.camera; renderer2 = result2.renderer;
+            const result2 = createScene(cubeCanvas, 3);
+            engine2 = result2.engine; scene2 = result2.scene; camera2 = result2.camera;
+            const shadowGenerator2 = result2.shadowGenerator;
 
-            singlePieceGroup = new THREE.Group();
-            scene1.add(singlePieceGroup);
+            // Create a parent node to hold all puzzle pieces
+            singlePieceGroup = new BABYLON.TransformNode("singlePieceGroup", scene1);
+            puzzleGroup = new BABYLON.TransformNode("puzzleGroup", scene2);
 
-            puzzleGroup = new THREE.Group();
-            scene2.add(puzzleGroup);
-            
-            loadSolutions();
+            // Start rendering loops
+            engine1.runRenderLoop(() => {
+                scene1.render();
+            });
+            engine2.runRenderLoop(() => {
+                scene2.render();
+            });
+
+            loadSolutions(shadowGenerator1, shadowGenerator2);
         }
 
         // --- Visualization Logic ---
-        function generateCube(x, y, z, color) {
-            // Reverted to BoxGeometry for a more cubic shape
-            const geometry = new THREE.BoxGeometry(CUBE_SIZE - GAP, CUBE_SIZE - GAP, CUBE_SIZE - GAP);
-            const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.2 });
-            const cube = new THREE.Mesh(geometry, material);
+        function generateCube(x, y, z, color, scene, shadowGenerator) {
+            // Create a box with bevels for a more polished look
+            const cube = BABYLON.MeshBuilder.CreateBox("cube", { size: CUBE_SIZE - GAP }, scene);
+            
+            // Apply PBR (Physically Based Rendering) material for realistic lighting
+            const pbr = new BABYLON.PBRMaterial("pbr", scene);
+            pbr.metallic = 0.5;
+            pbr.roughness = 0.5;
+            pbr.albedoColor = BABYLON.Color3.FromHexString(color);
+            cube.material = pbr;
+
             cube.position.set(x + CELL_OFFSET, y + CELL_OFFSET, z + CELL_OFFSET);
+            
+            // Enable shadows
+            shadowGenerator.addShadowCaster(cube);
+
             return cube;
         }
 
-        function drawPiece(piece, group, color) {
-            group.clear();
+        function drawPiece(piece, group, color, scene, shadowGenerator) {
+            // Dispose of old meshes before creating new ones
+            group.getChildren().forEach(child => child.dispose());
             piece.forEach(([x, y, z]) => {
-                group.add(generateCube(x, y, z, color));
+                const cube = generateCube(x, y, z, color, scene, shadowGenerator);
+                cube.parent = group; // Parent the cube to the group node
             });
         }
 
-        function drawSolution(finalCubePieces, group) {
-            group.clear();
+        function drawSolution(finalCubePieces, group, scene, shadowGenerator) {
+            group.getChildren().forEach(child => child.dispose());
             finalCubePieces.forEach((piece, i) => {
                 const color = palette[i % palette.length];
                 piece.forEach(([x, y, z]) => {
-                    group.add(generateCube(x, y, z, color));
+                    const cube = generateCube(x, y, z, color, scene, shadowGenerator);
+                    cube.parent = group;
                 });
             });
         }
+
+        function displayDefaultCube(shadowGenerator1, shadowGenerator2) {
+            console.log("cikti.txt not found or empty. Displaying a default 3x3x3 cube.");
+            const defaultN = 3;
+            const defaultPiece = [[0, 0, 0]];
+            const defaultFinalCube = [];
+            
+            // Generate all coordinates for a 3x3x3 cube
+            for (let x = 0; x < defaultN; x++) {
+                for (let y = 0; y < defaultN; y++) {
+                    for (let z = 0; z < defaultN; z++) {
+                        // Each cell is a "piece" for visualization purposes
+                        defaultFinalCube.push([[x, y, z]]); 
+                    }
+                }
+            }
+
+            solutionsData = [{
+                n: defaultN,
+                piece: defaultPiece,
+                finalCube: defaultFinalCube
+            }];
+
+            currentSolutionIndex = 0;
+            solutionCounter.textContent = "No solutions found. Displaying a default 3x3x3 cube.";
+            nextButton.disabled = true;
+
+            displaySolution(shadowGenerator1, shadowGenerator2);
+        }
         
-        async function loadSolutions() {
+        async function loadSolutions(shadowGenerator1, shadowGenerator2) {
             try {
+                // Fetch the solution data from the text file
                 const response = await fetch('cikti.txt');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -241,15 +237,13 @@
                 solutionsData = parseSolutions(text);
 
                 if (solutionsData.length > 0) {
-                    displaySolution();
+                    displaySolution(shadowGenerator1, shadowGenerator2);
                 } else {
-                    solutionCounter.textContent = "No solutions found.";
-                    nextButton.disabled = true;
+                    displayDefaultCube(shadowGenerator1, shadowGenerator2);
                 }
             } catch (error) {
                 console.error("Error loading cikti.txt:", error);
-                solutionCounter.textContent = "Error loading solutions file.";
-                nextButton.disabled = true;
+                displayDefaultCube(shadowGenerator1, shadowGenerator2);
             }
         }
 
@@ -260,22 +254,11 @@
             lines.forEach(line => {
                 try {
                     const data = JSON.parse(line);
-                    // Extract the necessary pieces from the JSON data
-                    const piece = data.piece;
-                    const placements = data.placements;
-                    const n = data.n;
-                    
-                    // We need to parse the `placements` to get a single, combined cube
-                    const finalCube = [];
-                    placements[0].forEach(cell => finalCube.push(cell));
-                    
-                    // The number of pieces is `n`
-                    const parts = n;
-
+                    // Correctly push the full `placements` array, which contains all pieces
                     parsed.push({
-                        n: n,
-                        piece: piece,
-                        finalCube: placements
+                        n: data.n,
+                        piece: data.piece,
+                        finalCube: data.placements // This is the array of all pieces
                     });
                 } catch (e) {
                     console.error("Error parsing JSON line:", e);
@@ -284,38 +267,29 @@
             return parsed;
         }
 
-
-        function displaySolution() {
+        function displaySolution(shadowGenerator1, shadowGenerator2) {
             if (solutionsData.length === 0) return;
 
             const solution = solutionsData[currentSolutionIndex];
             const N = solution.n;
-            const parts = solution.finalCube.length;
             
             solutionCounter.textContent = `Solution ${currentSolutionIndex + 1} of ${solutionsData.length}`;
 
-            // Update camera perspective based on the new N
-            camera1.position.set(N * 1.5, N * 1.5, N * 1.5);
-            camera1.lookAt(new THREE.Vector3(N / 2, N / 2, N / 2));
-            camera2.position.set(N * 1.5, N * 1.5, N * 1.5);
-            camera2.lookAt(new THREE.Vector3(N / 2, N / 2, N / 2));
+            // Update camera position based on the new N
+            camera1.target.set(N / 2, N / 2, N / 2);
+            camera1.radius = N * 2;
+            camera2.target.set(N / 2, N / 2, N / 2);
+            camera2.radius = N * 2;
 
             // Draw the single piece
-            drawPiece(solution.piece, singlePieceGroup, palette[0]);
+            drawPiece(solution.piece, singlePieceGroup, palette[0], scene1, shadowGenerator1);
             
             // Draw all pieces for the final cube in different colors
-            drawSolution(solution.finalCube, puzzleGroup);
-        }
-
-        function animate() {
-            animationFrameId = requestAnimationFrame(animate);
-            if (renderer1 && scene1 && camera1) renderer1.render(scene1, camera1);
-            if (renderer2 && scene2 && camera2) renderer2.render(scene2, camera2);
+            drawSolution(solution.finalCube, puzzleGroup, scene2, shadowGenerator2);
         }
 
         window.onload = function() {
             init();
-            animate();
         };
 
     </script>
